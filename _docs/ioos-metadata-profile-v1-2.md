@@ -225,6 +225,7 @@ platform_name | IOOS | A descriptive, long name for the platform used in collect
 platform_vocabulary | ACDD | Controlled vocabulary for the names used in the **`platform`** attribute.<br><br> The recommended value for the **`platform_vocabulary`** attribute is a URL to either the [IOOS Platform Category vocabulary](https://mmisw.org/ont/ioos/platform), or [NERC SeaVoX Platform Categories vocabulary](https://vocab.nerc.ac.uk/collection/L06/current/). <br><br>Example:{::nomarkdown}<ul> <li> <b><code> platform_vocabulary = "https://mmisw.org/ont/ioos/platform"</code></b> </ul>{:/}<br>The IOOS Metadata Profile diverges from the NCEI Templates 2.0 in that the use of the "NASA GCMD Platform Keywords 8.1" as a **`platform_vocabulary`** is not allowed.  The reason for this is that the **`platform`** global attribute is used in generating the [IOOS Asset Identifier 1.0](https://ioos.github.io/conventions-for-observing-asset-identifiers/ioos-assets-v1-0.html) for the dataset, and thus requires a single string platform name with no blank characters.  GCMD Platform Keywords do not follow this pattern and therefore are disallowed.  See the [Rules for Asset Identifier Generation](#rules-for-ioos-asset-identifier-generation) for more info. | global | **required**
 wmo_platform_code | IOOS | The WMO identifier for the platform used to measure the data.  This identifier can be any of the following types:<br>{::nomarkdown}<ul> <li>WMO ID for buoys (numeric, 5 digits)</li><li>WMO ID for gliders (numeric, 7 digits)</li><li>NWS ID (alphanumeric, 5 digits)</ul>{:/} When a dataset is assigned a **`wmo_platform_code`** it is thereby assigned a secondary Asset Identifier for the **'wmo' `naming_authority`**.  See the  [Rules for Asset Identifier Generation](#rules-for-ioos-asset-identifier-generation) for more information.  <br><br>Example: {::nomarkdown}<ul> <li> <b><code>wmo_platform_code = "44011"</code></b> </ul>{:/} | global | **required**, if applicable
 
+
 ### Platform Variable
 
 CF Discrete Sampling Geometries guidelines specify that datasets include a coordinate variable that uniquely identifies each feature in a collection of DSG featureTypes (e.g. 'timeSeries', 'profile', 'trajectory', 'timeSeriesProfile', 'trajectoryProfile', as specified by the **`featureType`** attribute).  For example, each buoy in a dataset with timeSeries feature instances from multiple buoys would have a unique identifier specified by the value of this coordinate variable.  
@@ -238,6 +239,65 @@ For more information about CF Discrete Sampling Geometries and associated requir
 Name | Convention | Description | Type | Role
 :--------- | :-------: | :------------------- | :--------: | :-------:
 platform_variable:cf_role | CF | Indicates the values of this variable contain identifiers for the [CF Discrete Sampling Geometry featureType](http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#_features_and_feature_types) features in the dataset. Allowed values are defined in [CF Coordinates and metadata - Chapter 9.5](http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#coordinates-metadata) and consist of: `timeseries_id`, `profile_id`, and `trajectory_id`, depending on the featureType represented in the dataset, as specified by the **`featureType`** global attribute. <br><br>Example: {::nomarkdown}<ul><li><b><code>cf_role = "timeseries_id"</code></b></li></ul>{:/}| variable | **required**
+
+#### Example
+
+Minimal timeSeries example dataset that includes three individual sensors co-located on a single platform, with two measured variables to be published to the GTS.  Assumes sampling time is common across each sensor.  (Adapted from CF Orthogonal Multidimensional Representation of TimeSeries ([H.2.1](http://cfconventions.org/cf-conventions/cf-conventions.html#_orthogonal_multidimensional_array_representation_of_time_series))
+
+**Notes:**
+* **`lat`**, **`lon`** should be constant for each value in ‘station’ dimension
+* **`alt`** can vary by ‘station’ dimension
+* **`time`** varies only by ‘time’ dimension: use only when individual sensors have same sampling frequency
+
+```
+dimensions:
+     station = 3 ;  // measurement locations (individual sensors on a single platform)
+     time = UNLIMITED ;
+
+variables:
+    float temperature(station,time) ;
+       temperature:standard_name = "sea_water_temperature" ;
+       temperature:coordinates = "lat lon alt station" ;
+       temperature:_FillValue = -999.9f;
+       temperature:platform = “station”
+       temperature:gts_ingest = “true”
+    float salinity(station,time) ;
+       salinity:standard_name = "sea_water_practical_salinity" ;
+       salinity:coordinates = "lat lon alt station" ;
+       salinity:_FillValue = -999.9f;
+       salinity:platform = “station”
+       salinity:gts_ingest = “true”
+    double time(time) ;
+       time:standard_name = "time";
+       time:long_name = "time of measurement" ;
+       time:units = "days since 1970-01-01 00:00:00" ;
+    float lon(station) ;
+       lon:standard_name = "longitude";
+       lon:long_name = "station longitude";
+       lon:units = "degrees_east";
+    float lat(station) ;
+       lat:standard_name = "latitude";
+       lat:long_name = "station latitude" ;
+       lat:units = "degrees_north" ;
+    float alt(station) ;
+       alt:long_name = "vertical distance above the surface" ;
+       alt:standard_name = "height" ;
+       alt:units = "m";
+       alt:positive = "up";
+       alt:axis = "Z";
+    int station(station) ;
+       station:long_name = "Station ID" ;   // timeSeries or sensor identifier internal to dataset
+       station:cf_role = "timeseries_id";
+
+attributes:
+       :featureType = "timeSeries";
+       :platform = “buoy”
+       :platform_name = “Human-readable Station Name”
+       :platform_id = “cb0102”      // station or platform identifier used in downstream applications
+       :platform_vocabulary = "https://mmisw.org/ont/ioos/platform"
+       :wmo_platform_code = 12345
+       :gts_ingest = “true”
+```
 
 
 ### Quality Control/QARTOD
